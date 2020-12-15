@@ -14,7 +14,7 @@ users = {'unames': ['BDXlIFCyDITB2FwqIG8rTw==',  # 189
                     'xTaSwzbCbuXYERpm9WKUBQ==',  # 158
                     ], 'upass': 'LUXWSieEVbZ8F+VZeTzLxg=='}
 # pytesseract.tesseract_cmd = r"E:\Program Files\jTessBoxEditorFX\tesseract-ocr\tesseract.exe"
-tessdate_dir = r'--tessdata-dir ".\tessdata" --psm 7 tv189'
+tessdate_dir = r'--tessdata-dir "./tessdata" --psm 7 tv189'
 phones = [18948100719, 18934076671, 13692523972]
 login_bypass_url = 'http://h5.nty.tv189.com/csite/tysx/uc/login-by-pass?goBackUrl='
 login_url = 'http://h5.nty.tv189.com/api/portal/h5inter/login'
