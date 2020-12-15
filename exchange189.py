@@ -78,7 +78,7 @@ def exchange(user, index):
                                headers=headers)
     login_json = json.loads(login_resp.text)
     if login_json.get('code') == 0:
-        for i in range(1, 300):
+        for i in range(1, 100):
             png = _session.get(validate_url)
             if png.content[:2].hex() == '0d0a':
                 bys = png.content[2:]
@@ -92,10 +92,8 @@ def exchange(user, index):
             resp = _session.get(exchange_url % (str(phones[index]), code))
             resp_json = json.loads(resp.text)
             print(resp.json())
-            if resp_json['code'] == 0:
+            if resp_json['code'] == 0 or resp_json['code'] == -3:
                 return
-            else:
-                time.sleep(0.1)
     else:
         print("login failed")
 
@@ -104,7 +102,7 @@ if __name__ == '__main__':
     hms = time.strftime('%H:%M:%S', time.localtime())
     print(hms)
     ds = hms.split(":")
-    if ds[0] == '11':
+    if ds[0] == '03':
         sleepTime = (59 - int(ds[1])) * 60 + 55 - int(ds[2])
         time.sleep(sleepTime)
     for index, user in enumerate(users['unames']):
