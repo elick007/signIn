@@ -57,21 +57,20 @@ async function start() {
   await exec("node JD_DailyBonus.js >> result.txt");
   console.log('执行完毕')
 
-  if (serverJ) {
-    const path = "./result.txt";
-    let content = "";
-    if (fs.existsSync(path)) {
-      content = fs.readFileSync(path, "utf8");
+  const path = "./result.txt";
+  let content = "";
+  if (fs.existsSync(path)) {
+    content = fs.readFileSync(path, "utf8");
     }
-    let t = content.match(/【签到概览】:((.|\n)*)【签到总计】/)
-    let res = t ? t[1].replace(/\n/,'') : '失败'
-    let t2 = content.match(/【签到总计】:((.|\n)*)【账号总计】/)
-    let res2 = t2 ? t2[1].replace(/\n/,'') : '总计0'
+  let t = content.match(/【签到概览】:((.|\n)*)【签到总计】/)
+  let res = t ? t[1].replace(/\n/,'') : '失败'
+  let t2 = content.match(/【签到总计】:((.|\n)*)【账号总计】/)
+  let res2 = t2 ? t2[1].replace(/\n/,'') : '总计0'
 
-    console.log("res="+res)
-    console.log("res2="+res2)
+  console.log("res="+res)
+  console.log("res2="+res2)
     //await sendNotify("" + ` ${res2} ` + ` ${res} ` + new Date().toLocaleDateString(), content);
-  }
+  
 }
 
 start()
