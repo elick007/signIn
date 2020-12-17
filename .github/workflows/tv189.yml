@@ -39,7 +39,6 @@ jobs:
     - name: signin tv189
       run: |
         python ./tv189.py
-        bash ./blt.sh
     - name: signin blt
       run: |
         bash ./blt.sh
