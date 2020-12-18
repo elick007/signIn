@@ -32,6 +32,10 @@ jobs:
 
       # Runs a set of commands using the runners shell
       - name: Run app
+        env:
+          JD_COOKIE: ${{ secrets.JD_COOKIE }}
+          JD_COOKIE_2: ${{ secrets.JD_COOKIE_2 }} 
+          PUSH_KEY: ${{ secrets.PUSH_KEY }}
         run: |
           npm install
           node app.js
