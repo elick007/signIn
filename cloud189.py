@@ -1,27 +1,14 @@
-import io
-import os
-import sys
-
 import requests, time, re, rsa, json, base64
 from urllib import parse
 
-from PIL import Image
-from pytesseract import pytesseract
-
 s = requests.Session()
 
-username = "18948100719"
-password = "MZxh.19950810"
-_auth_url = 'https://open.e.189.cn/api/logbox/oauth2/'
-headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:74.0) Gecko/20100101 Firefox/76.0',
-    'Referer': 'https://open.e.189.cn/',
-}
-pytesseract.tesseract_cmd = r"E:\Program Files\jTessBoxEditorFX\tesseract-ocr\tesseract.exe"
-tessdate_dir = r'--tessdata-dir "E:\Program Files\jTessBoxEditorFX\tesseract-ocr\tessdata"'
+username = ""
+password = ""
+
 if (username == "" or password == ""):
-    username = input("username:")
-    password = input("password:")
+    username = input("账号：")
+    password = input("密码：")
 
 
 def main():
@@ -30,6 +17,12 @@ def main():
     surl = f'https://api.cloud.189.cn/mkt/userSign.action?rand={rand}&clientType=TELEANDROID&version=8.6.3&model=SM-G930K'
     url = f'https://m.cloud.189.cn/v2/drawPrizeMarketDetails.action?taskId=TASK_SIGNIN&activityId=ACT_SIGNIN'
     url2 = f'https://m.cloud.189.cn/v2/drawPrizeMarketDetails.action?taskId=TASK_SIGNIN_PHOTOS&activityId=ACT_SIGNIN'
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 5.1.1; SM-G930K Build/NRD90M; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/74.0.3729.136 Mobile Safari/537.36 Ecloud/8.6.3 Android/22 clientId/355325117317828 clientModel/SM-G930K imsi/460071114317824 clientChannelId/qq proVersion/1.0.6',
+        "Referer": "https://m.cloud.189.cn/zhuanti/2016/sign/index.jsp?albumBackupOpened=1",
+        "Host": "m.cloud.189.cn",
+        "Accept-Encoding": "gzip, deflate",
+    }
     response = s.get(surl, headers=headers)
     netdiskBonus = response.json()['netdiskBonus']
     if (response.json()['isSign'] == "false"):
@@ -118,7 +111,6 @@ def login(username, password):
 
     username = rsa_encode(j_rsakey, username)
     password = rsa_encode(j_rsakey, password)
-    captcha = _needcaptcha(captchaToken, username)
     url = "https://open.e.189.cn/api/logbox/oauth2/loginSubmit.do"
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:74.0) Gecko/20100101 Firefox/76.0',
@@ -129,7 +121,7 @@ def login(username, password):
         "accountType": '01',
         "userName": f"{{RSA}}{username}",
         "password": f"{{RSA}}{password}",
-        "validateCode": f"{captcha}",
+        "validateCode": "",
         "captchaToken": captchaToken,
         "returnUrl": returnUrl,
         "mailSuffix": "@189.cn",
@@ -143,75 +135,6 @@ def login(username, password):
     redirect_url = r.json()['toUrl']
     r = s.get(redirect_url)
     return s
-
-
-def _needcaptcha(captchaToken, username):
-    """登录验证码处理函数"""
-    url = _auth_url + "needcaptcha.do"
-    post_data = {
-        "accountType": "01",
-        "userName": f"{{RSA}}{username}",
-        "appKey": "cloud"
-    }
-    r = s.post(url, data=post_data, headers=headers)
-    captcha = ""
-    if r.text != "0":  # 需要验证码
-        pic_url = _auth_url + "picCaptcha.do"
-        img_data = s.get(
-            pic_url, params={"token": captchaToken}, headers=headers).content
-        with open("E:\\image.png", "wb") as f:
-            f.write(img_data)
-        image=Image.open(io.BytesIO(img_data)).convert("L")
-        b_image=binarizing(image,126)
-        b_image.save("E:\\b_image.png")
-        d_image=depoint(b_image)
-        d_image.save("E:\\d_image.png")
-        captcha =pytesseract.image_to_string(d_image,lang="eng",config=tessdate_dir)
-        print(captcha)
-    else:
-        print("No verification code processing function!")
-    return captcha
-
-def binarizing(img: Image, threshold):
-    pixdata = img.load()
-    w, h = img.size
-    for y in range(h):
-        for x in range(w):
-            if pixdata[x, y] < threshold:
-                pixdata[x, y] = 0
-            else:
-                pixdata[x, y] = 255
-    return img
-
-
-def depoint(img):  # input: gray image
-    pixdata = img.load()
-    w, h = img.size
-    for y in range(1, h - 1):
-        for x in range(1, w - 1):
-            if y == 1:
-                pixdata[x, 0] = 255
-                pixdata[w - 1, 0] = 255
-            count = 0
-            if pixdata[x, y - 1] > 245:
-                count = count + 1
-            if pixdata[x, y + 1] > 245:
-                count = count + 1
-            if pixdata[x - 1, y] > 245:
-                count = count + 1
-            if pixdata[x + 1, y] > 245:
-                count = count + 1
-            if pixdata[x - 1, y - 1] > 245:
-                count += 1
-            if pixdata[x - 1, y + 1] > 245:
-                count += 1
-            if pixdata[x + 1, y - 1] > 245:
-                count += 1
-            if pixdata[x + 1, y + 1] > 245:
-                count += 1
-            if count > 6:
-                pixdata[x, y] = 255
-    return img
 
 
 if __name__ == "__main__":
