@@ -10,7 +10,8 @@ from base64 import b64encode
 
 from pytesseract import pytesseract
 
-import utils
+from utils import logger, UA, SUFFIX_PARAM, API, get_time, binarizing, depoint, b64tohex, encrypt, rsa_encode, \
+    calculate_md5_sign
 import requests
 import rsa
 from PIL import Image
@@ -18,17 +19,12 @@ from urllib3 import disable_warnings
 from urllib3.exceptions import InsecureRequestWarning
 
 __all__ = ['Cloud189']
-logger = logging.getLogger('cloud189')
-API = 'https://api.cloud.189.cn'
-UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) ????/1.0.0 ' \
-     'Chrome/69.0.3497.128 Electron/4.2.12 Safari/537.36 '
-# UA = 'Mozilla/5.0'
-SUFFIX_PARAM = 'clientType=TELEMAC&version=1.0.0&channelId=web_cloud.189.cn'
 
 
 class Cloud189(object):
     SUCCESS = 0
     FAILED = -1
+    NETWORK_ERROR=-1
 
     def __init__(self):
         self._session = requests.Session()
@@ -156,6 +152,115 @@ class Cloud189(object):
         self.login(username, password)
         return Cloud189.FAILED
 
+    def get_token_pre_params(self):
+        """登录前参数准备"""
+        url = 'https://cloud.189.cn/unifyLoginForPC.action'
+        params = {
+            'appId': 8025431004,
+            'clientType': 10020,
+            'returnURL': 'https://m.cloud.189.cn/zhuanti/2020/loginErrorPc/index.html',
+            'timeStamp': get_time(stamp=True)
+        }
+        resp = requests.get(url, params=params)
+        if not resp:
+            return Cloud189.NETWORK_ERROR, None
+
+        param_id = re.search(r'paramId = "(\S+)"', resp.text, re.M)
+        req_id = re.search(r'reqId = "(\S+)"', resp.text, re.M)
+        return_url = re.search(r"returnUrl = '(\S+)'", resp.text, re.M)
+        captcha_token = re.search(r"captchaToken' value='(\S+)'", resp.text, re.M)
+        j_rsakey = re.search(r'j_rsaKey" value="(\S+)"', resp.text, re.M)
+        lt = re.search(r'lt = "(\S+)"', resp.text, re.M)
+
+        param_id = param_id.group(1) if param_id else ''
+        req_id = req_id.group(1) if req_id else ''
+        return_url = return_url.group(1) if return_url else ''
+        captcha_token = captcha_token.group(1) if captcha_token else ''
+        j_rsakey = j_rsakey.group(1) if j_rsakey else ''
+        lt = lt.group(1) if lt else ''
+
+        return Cloud189.SUCCESS, (param_id, req_id, return_url, captcha_token, j_rsakey, lt)
+
+    def get_token(self,username, password):
+        """获取token"""
+        code, result = self.get_token_pre_params()
+        if code != Cloud189.SUCCESS:
+            return code, None
+
+        param_id, req_id, return_url, captcha_token, j_rsakey, lt = result
+
+        username = rsa_encode(j_rsakey, username)
+        password = rsa_encode(j_rsakey, password)
+        url = "https://open.e.189.cn/api/logbox/oauth2/loginSubmit.do"
+        headers = {
+            "User-Agent": UA,
+            "Referer": "https://open.e.189.cn/api/logbox/oauth2/unifyAccountLogin.do",
+            "Cookie": f"LT={lt}",
+            "X-Requested-With": "XMLHttpRequest",
+            "REQID": req_id,
+            "lt": lt
+        }
+        data = {
+            "appKey": "8025431004",
+            "accountType": "02",
+            "userName": f"{{RSA}}{username}",
+            "password": f"{{RSA}}{password}",
+            "validateCode": "",
+            "captchaToken": captcha_token,
+            "returnUrl": return_url,
+            "mailSuffix": "@189.cn",
+            "dynamicCheck": "FALSE",
+            "clientType": 10020,
+            "cb_SaveName": 1,
+            "isOauth2": 'false',
+            "state": "",
+            "paramId": param_id
+        }
+        resp = requests.post(url, data=data, headers=headers, timeout=10)
+        if not resp:
+            return Cloud189.NETWORK_ERROR, None
+        resp = resp.json()
+        if 'toUrl' in resp:
+            redirect_url = resp['toUrl']
+        else:
+            redirect_url = ''
+        logger.debug(f"Token: {resp['msg']=}")
+        url = API + '/getSessionForPC.action'
+        headers = {
+            "User-Agent": UA,
+            "Accept": "application/json;charset=UTF-8"
+        }
+        params = {
+            'clientType': 'TELEMAC',
+            'version': '1.0.0',
+            'channelId': 'web_cloud.189.cn',
+            'redirectURL': redirect_url
+        }
+        resp = requests.get(url, params=params, headers=headers, timeout=10)
+        if not resp:
+            return Cloud189.NETWORK_ERROR, None
+
+        sessionKey = resp.json()['sessionKey']
+        sessionSecret = resp.json()['sessionSecret']
+        accessToken = resp.json()['accessToken']  # 需要再验证一次？
+
+        url = API + '/open/oauth2/getAccessTokenBySsKey.action'
+        timestamp = get_time(stamp=True)
+        params = f'AppKey=601102120&Timestamp={timestamp}&sessionKey={sessionKey}'
+        headers = {
+            "AppKey": '601102120',
+            'Signature': calculate_md5_sign(params),
+            "Sign-Type": "1",
+            "Accept": "application/json",
+            'Timestamp': timestamp,
+        }
+        resp = requests.get(url, params={'sessionKey': sessionKey}, headers=headers, timeout=10)
+        if not resp:
+            return Cloud189.NETWORK_ERROR
+        accessToken = resp.json()['accessToken']
+
+        return Cloud189.SUCCESS, (sessionKey, sessionSecret, accessToken)
+
     def user_sign(self):
         """签到 + 抽奖"""
         sign_url = API + '//mkt/userSign.action'
@@ -189,63 +294,13 @@ class Cloud189(object):
             params.update({'taskId': 'TASK_SIGNIN_PHOTOS'})
 
 
-RSA_KEY = """-----BEGIN PUBLIC KEY-----
-MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDY7mpaUysvgQkbp0iIn2ezoUyh
-i1zPFn0HCXloLFWT7uoNkqtrphpQ/63LEcPz1VYzmDuDIf3iGxQKzeoHTiVMSmW6
-FlhDeqVOG094hFJvZeK4OzA6HVwzwnEW5vIZ7d+u61RV1bsFxmB68+8JXs3ycGcE
-4anY+YzZJcyOcEGKVQIDAQAB
------END PUBLIC KEY-----
-"""
-b64map = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-BI_RM = list("0123456789abcdefghijklmnopqrstuvwxyz")
-
-
-def int2char(a):
-    return BI_RM[a]
-
-
-def b64tohex(a):
-    d = ""
-    e = 0
-    for i in range(len(a)):
-        if list(a)[i] != "=":
-            v = b64map.index(list(a)[i])
-            if 0 == e:
-                e = 1
-                d += int2char(v >> 2)
-                c = 3 & v
-            elif 1 == e:
-                e = 2
-                d += int2char(c << 2 | v >> 4)
-                c = 15 & v
-            elif 2 == e:
-                e = 3
-                d += int2char(c)
-                d += int2char(v >> 2)
-                c = 3 & v
-            else:
-                e = 0
-                d += int2char(c << 2 | v >> 4)
-                d += int2char(15 & v)
-    if e == 1:
-        d += int2char(c << 2)
-    return d
-
-
-def encrypt(password: str) -> str:
-    return b64encode(
-        rsa.encrypt(
-            (password).encode('utf-8'),
-            rsa.PublicKey.load_pkcs1_openssl_pem(RSA_KEY.encode())
-        )
-    ).decode()
 
 
 def captcah_handler(img_data) -> str:
     tessdate_dir = r'--tessdata-dir "./tessdata" --psm 7 cloud189'
     image = Image.open(io.BytesIO(img_data)).convert("L")
-    b_image = utils.binarizing(image, 126)
-    d_image = utils.depoint(b_image)
+    b_image = binarizing(image, 126)
+    d_image = depoint(b_image)
     return pytesseract.image_to_string(d_image, lang="cloud189", config=tessdate_dir)[:-2].replace(" ", "")
 
 
