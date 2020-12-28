@@ -147,6 +147,9 @@ class Cloud189(object):
         msg = r.json()["msg"]
         if msg == "登录成功":
             self._get(r.json()["toUrl"])
+            code, token = self.get_token(username, password)
+            if code == Cloud189.SUCCESS:
+                self.set_session(*token)
             return Cloud189.SUCCESS
         print(msg)
         self.login(username, password)
