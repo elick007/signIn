@@ -39,9 +39,9 @@ jobs:
         pip install pillow
         pip install requests
         pip install rsa
-    - name: signin tv189
-      run: |
-        python ./tv189.py
+#     - name: signin tv189
+#       run: |
+#         python ./tv189.py
     - name: signin blt
       run: |
         bash ./blt.sh
