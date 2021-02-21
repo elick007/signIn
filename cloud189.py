@@ -29,7 +29,7 @@ class Cloud189(object):
     def __init__(self):
         self._session = requests.Session()
         self._captcha_handler = None
-        self._timeout = 15  # 每个请求的超时(不包含下载响应体的用时)
+        self._timeout = 20  # 每个请求的超时(不包含下载响应体的用时)
         self._host_url = 'https://cloud.189.cn'
         self._auth_url = 'https://open.e.189.cn/api/logbox/oauth2/'
         self._cookies = None
@@ -257,7 +257,7 @@ class Cloud189(object):
             "Accept": "application/json",
             'Timestamp': timestamp,
         }
-        resp = requests.get(url, params={'sessionKey': sessionKey}, headers=headers, timeout=10)
+        resp = requests.get(url, params={'sessionKey': sessionKey}, headers=headers, timeout=30)
         if not resp:
             return Cloud189.NETWORK_ERROR
         accessToken = resp.json()['accessToken']
