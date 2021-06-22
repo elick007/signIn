@@ -21,12 +21,13 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      -name: 'push to ibm'
+      - name: 'push to ibm'
         run: |
-          sudo apt-get install git
-          git clone $GIT_URL -o ibm
-          cd ibm
-          date > report.txt
-          git add report.txt
-          git commit -am "report"
-          git push $GIT_URL
+        sudo apt-get install git
+        git clone $GIT_URL -o ibm
+        cd ibm
+        date > report.txt
+        git add report.txt
+        git commit -am "report"
+        git push $GIT_URL
+          
