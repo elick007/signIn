@@ -24,7 +24,7 @@ jobs:
       - name: 'push to ibm'
         run: |
           sudo apt-get install git
-          git clone ${{ secrets.GIT_URL }} -o ibm
+          git clone ${{ secrets.GIT_URL }} ibm
           cd ibm
           date > report.txt
           git add report.txt
