@@ -24,6 +24,8 @@ jobs:
       - name: 'push to ibm'
         run: |
           sudo apt-get install git
+          git config --global user.email "ibm@gmail.com"
+          git config --global user.name "ibm"
           git clone ${{ secrets.GIT_URL }} ibm
           cd ibm
           date > report.txt
