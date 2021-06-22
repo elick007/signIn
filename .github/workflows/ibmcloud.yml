@@ -23,11 +23,11 @@ jobs:
     steps:
       - name: 'push to ibm'
         run: |
-        sudo apt-get install git
-        git clone $GIT_URL -o ibm
-        cd ibm
-        date > report.txt
-        git add report.txt
-        git commit -am "report"
-        git push $GIT_URL
+          sudo apt-get install git
+          git clone ${{ secrets.GIT_URL }} -o ibm
+          cd ibm
+          date > report.txt
+          git add report.txt
+          git commit -am "report"
+          git push ${{ secrets.GIT_URL }}
           
